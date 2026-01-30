@@ -1,0 +1,110 @@
+body {
+  font-family: "Segoe UI", sans-serif;
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  margin: 0;
+  padding: 20px;
+}
+h2 {
+  color: #ffffff;
+  margin-top: 0;
+}
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.row {
+  display: flex;
+  gap: 20px;
+}
+.col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+label {
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #ffffff;
+}
+textarea {
+  background-color: #2d2d2d;
+  color: #ffffff;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 10px;
+  height: 200px;
+  font-family: monospace;
+  resize: vertical;
+}
+.settings-bar {
+  background-color: #2d2d2d;
+  padding: 15px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border: 1px solid #444;
+}
+select {
+  background-color: #1e1e1e;
+  color: white;
+  border: 1px solid #444;
+  padding: 5px;
+  border-radius: 4px;
+}
+button {
+  background-color: #21aeb3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+button:disabled {
+  background-color: #444;
+}
+.progress-container {
+  width: 100%;
+  background-color: #444;
+  border-radius: 4px;
+  display: none;
+}
+#progressBar {
+  width: 0%;
+  height: 10px;
+  background-color: #21aeb3;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.status-bar {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #aaa;
+}
+.table-wrapper {
+  margin-top: 20px;
+  overflow-x: auto;
+  background: #2d2d2d;
+  border-radius: 6px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th, td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #444;
+}
+.status-valid { color: #21aeb3; font-weight: bold; }
+.status-partial { color: #f1c40f; font-weight: bold; }
+.status-error { color: #e74c3c; font-weight: bold; }
+#downloadBtn {
+  background-color: #27ae60;
+  display: none;
+  margin-top: 15px;
+}
