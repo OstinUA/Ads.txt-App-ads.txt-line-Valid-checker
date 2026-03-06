@@ -36,7 +36,11 @@ textarea {
   padding: 10px;
   height: 200px;
   font-family: monospace;
+  font-size: 12px;
   resize: vertical;
+}
+textarea::placeholder {
+  color: #666;
 }
 .settings-bar {
   background-color: #2d2d2d;
@@ -46,6 +50,7 @@ textarea {
   align-items: center;
   gap: 20px;
   border: 1px solid #444;
+  flex-wrap: wrap;
 }
 select {
   background-color: #1e1e1e;
@@ -53,6 +58,11 @@ select {
   border: 1px solid #444;
   padding: 5px;
   border-radius: 4px;
+}
+.button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 button {
   background-color: #21aeb3;
@@ -62,15 +72,27 @@ button {
   border-radius: 4px;
   font-weight: bold;
   cursor: pointer;
+  transition: background-color 0.2s;
+}
+button:hover:not(:disabled) {
+  background-color: #1a8f93;
 }
 button:disabled {
   background-color: #444;
+  cursor: not-allowed;
+}
+#stopBtn {
+  background-color: #e74c3c;
+}
+#stopBtn:hover:not(:disabled) {
+  background-color: #c0392b;
 }
 .progress-container {
   width: 100%;
   background-color: #444;
   border-radius: 4px;
   display: none;
+  overflow: hidden;
 }
 #progressBar {
   width: 0%;
@@ -80,25 +102,53 @@ button:disabled {
   transition: width 0.3s;
 }
 .status-bar {
-  margin-top: 10px;
   font-size: 13px;
   color: #aaa;
 }
+.stats-bar {
+  font-size: 13px;
+  padding: 8px 12px;
+  background-color: #2d2d2d;
+  border-radius: 4px;
+  border: 1px solid #444;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.stats-bar:empty {
+  display: none;
+}
+.stat-total { color: #e0e0e0; }
+.stat-valid { color: #21aeb3; }
+.stat-partial { color: #f1c40f; }
+.stat-missing { color: #e67e22; }
+.stat-error { color: #e74c3c; }
 .table-wrapper {
-  margin-top: 20px;
+  margin-top: 10px;
   overflow-x: auto;
   background: #2d2d2d;
   border-radius: 6px;
+  max-height: 500px;
+  overflow-y: auto;
 }
 table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
+th {
+  position: sticky;
+  top: 0;
+  background-color: #363636;
+  z-index: 1;
+}
 th, td {
   padding: 10px;
   text-align: left;
   border-bottom: 1px solid #444;
+}
+td {
+  word-break: break-word;
 }
 .status-valid { color: #21aeb3; font-weight: bold; }
 .status-partial { color: #f1c40f; font-weight: bold; }
@@ -106,5 +156,14 @@ th, td {
 #downloadBtn {
   background-color: #27ae60;
   display: none;
-  margin-top: 15px;
+}
+#downloadBtn:hover {
+  background-color: #219a52;
+}
+#copyBtn {
+  background-color: #8e44ad;
+  display: none;
+}
+#copyBtn:hover:not(:disabled) {
+  background-color: #732d91;
 }

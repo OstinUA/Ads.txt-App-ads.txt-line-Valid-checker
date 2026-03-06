@@ -23,22 +23,35 @@
           <option value="errors">Errors / Warnings Only</option>
         </select>
       </div>
+      <div>
+        <label>Batch Size:</label>
+        <select id="batchSize">
+          <option value="2">2</option>
+          <option value="5" selected>5</option>
+          <option value="10">10</option>
+          <option value="20">20</option>
+        </select>
+      </div>
     </div>
     <div class="row">
       <div class="col">
         <label>Target Websites</label>
-        <textarea id="targetList" placeholder="example.com"></textarea>
+        <textarea id="targetList" placeholder="example.com&#10;another-site.com"></textarea>
       </div>
       <div class="col">
         <label>Reference Lines</label>
-        <textarea id="refList" placeholder="google.com, pub-1234, DIRECT"></textarea>
+        <textarea id="refList" placeholder="google.com, pub-1234, DIRECT&#10;adnetwork.com, 9876, RESELLER"></textarea>
       </div>
     </div>
-    <button id="runBtn">Start Validation</button>
+    <div class="button-row">
+      <button id="runBtn">Start Validation</button>
+      <button id="stopBtn" disabled>Stop</button>
+    </div>
     <div class="progress-container" id="progressContainer">
       <div id="progressBar"></div>
     </div>
     <div class="status-bar" id="statusText">Ready</div>
+    <div class="stats-bar" id="statsBar"></div>
     <div class="table-wrapper">
       <table id="resultsTable">
         <thead>
@@ -47,12 +60,16 @@
             <th>Reference</th>
             <th>Result</th>
             <th>Details</th>
+            <th>Owner</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
-    <button id="downloadBtn">Download CSV</button>
+    <div class="button-row">
+      <button id="downloadBtn">Download CSV</button>
+      <button id="copyBtn">Copy to Clipboard</button>
+    </div>
   </div>
   <script src="popup.js"></script>
 </body>
