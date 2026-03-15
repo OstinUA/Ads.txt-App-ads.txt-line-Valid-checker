@@ -38,7 +38,7 @@ jobs:
                   path = os.path.join(root, fname).lstrip('./')
                   try:
                       with open(os.path.join(root, fname), 'r', encoding='utf-8', errors='ignore') as f:
-                          content = f.read(3000)
+                          content = f.read(1500)
                       files[path] = content
                   except:
                       pass
@@ -51,32 +51,57 @@ jobs:
       - name: Generate all wiki pages via Gemini
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          REPO: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
           python - <<'EOF'
           import os, json, requests, time
+          from datetime import datetime, timezone
+          from concurrent.futures import ThreadPoolExecutor, as_completed
 
           with open('/tmp/repo_files.json') as f:
               files = json.load(f)
 
-          file_dump = ""
-          for path, content in files.items():
-              file_dump += f"\n\n### {path}\n```\n{content}\n```"
-              if len(file_dump) > 80000:
-                  file_dump += "\n\n[truncated...]"
-                  break
+          repo = os.environ['REPO']
+          commit_sha = os.environ['COMMIT_SHA']
+          generated_at = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
 
-          topics = {
-              "Architecture":         "Describe the project architecture: key files, how they interact, data flow, design decisions.",
+          topic_files = {
+              "Architecture":            None,
+              "Setup-and-Configuration": None,
+              "How-It-Works":            None,
+              "Security":                None,
+              "Contributing":            None,
+              "API-Reference":           {'.py'},
+              "Troubleshooting":         None,
+              "Changelog":               {'.md'},
+              "Environment-Variables":   {'.py', '.yml', '.yaml'},
+              "GitHub-Actions-Pipeline": {'.yml', '.yaml'},
+          }
+
+          topic_prompts = {
+              "Architecture":            "Describe the project architecture: key files, how they interact, data flow, design decisions.",
               "Setup-and-Configuration": "Prerequisites, installation steps, all env variables and secrets with explanations.",
-              "How-It-Works":         "Step-by-step runtime flow: triggers, logic, API calls, outputs.",
-              "Security":             "What secrets are used, how auth works, potential risks, recommendations.",
-              "Contributing":         "How to run locally, code style, PR process, testing.",
-              "API-Reference":        "All external APIs used: endpoints, payloads, response formats, error handling.",
-              "Troubleshooting":      "Common problems and solutions based on the codebase logic.",
-              "Changelog":            "Key features and changes as a changelog-style entry.",
-              "Environment-Variables":"Full reference of every env var: name, purpose, example value, required or optional.",
+              "How-It-Works":            "Step-by-step runtime flow: triggers, logic, API calls, outputs.",
+              "Security":                "What secrets are used, how auth works, potential risks, recommendations.",
+              "Contributing":            "How to run locally, code style, PR process, testing.",
+              "API-Reference":           "All external APIs used: endpoints, payloads, response formats, error handling.",
+              "Troubleshooting":         "Common problems and solutions based on the codebase logic.",
+              "Changelog":               "Key features and changes as a changelog-style entry.",
+              "Environment-Variables":   "Full reference of every env var: name, purpose, example value, required or optional.",
               "GitHub-Actions-Pipeline": "How the CI/CD pipeline works: triggers, jobs, steps, secrets injection, permissions.",
           }
+
+          def build_dump(exts=None):
+              dump = ""
+              for path, content in files.items():
+                  if exts and os.path.splitext(path)[1] not in exts:
+                      continue
+                  dump += f"\n\n### {path}\n```\n{content}\n```"
+                  if len(dump) > 40000:
+                      dump += "\n\n[truncated...]"
+                      break
+              return dump
 
           headers = {"Content-Type": "application/json"}
           models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
@@ -89,7 +114,9 @@ jobs:
                       try:
                           resp = requests.post(url, json=payload, headers=headers, timeout=120)
                           if resp.status_code == 429:
-                              time.sleep(15 * (2 ** attempt))
+                              wait = 15 * (2 ** attempt)
+                              print(f"Rate limited, waiting {wait}s...")
+                              time.sleep(wait)
                               continue
                           resp.raise_for_status()
                           return resp.json()['candidates'][0]['content']['parts'][0]['text'].strip()
@@ -98,18 +125,19 @@ jobs:
                           time.sleep(10)
               return None
 
-          os.makedirs('/tmp/wiki_pages', exist_ok=True)
+          def generate_topic(topic):
+              t0 = time.time()
+              file_dump = build_dump(topic_files[topic])
+              prompt = f"""Repository: {repo}
 
-          for topic, instruction in topics.items():
-              print(f"Generating: {topic}...")
-              prompt = f"""Write a GitHub Wiki page about "{topic}" for this repository.
+          Write a GitHub Wiki page about "{topic}".
 
-          Instructions: {instruction}
+          Instructions: {topic_prompts[topic]}
 
           Rules:
           - Max 400 words
           - Use markdown headers (##, ###)
-          - Be specific to THIS codebase, not generic
+          - Be specific to THIS repository ({repo}), not generic
           - No intro like "This page covers..." — start directly with content
           - Do not repeat the page title as H1
 
@@ -117,13 +145,38 @@ jobs:
           {file_dump}
           """
               result = call_gemini(prompt)
-              if result:
-                  with open(f'/tmp/wiki_pages/{topic}.md', 'w') as f:
-                      f.write(result)
-                  print(f"Done: {topic}")
-              else:
-                  print(f"Failed: {topic}")
-              time.sleep(3)
+              elapsed = round(time.time() - t0, 1)
+              return topic, result, elapsed
+
+          os.makedirs('/tmp/wiki_pages', exist_ok=True)
+
+          footer_tpl = "\n\n---\n*Generated from [{sha}](https://github.com/{repo}/commit/{sha}) · {date}*"
+          failed = []
+          topics = list(topic_files.keys())
+
+          for i in range(0, len(topics), 2):
+              batch = topics[i:i+2]
+              print(f"Batch: {batch}")
+
+              with ThreadPoolExecutor(max_workers=2) as executor:
+                  futures = {executor.submit(generate_topic, t): t for t in batch}
+                  for future in as_completed(futures):
+                      topic, result, elapsed = future.result()
+                      if result:
+                          footer = footer_tpl.format(sha=commit_sha[:7], repo=repo, date=generated_at)
+                          with open(f'/tmp/wiki_pages/{topic}.md', 'w') as f:
+                              f.write(result + footer)
+                          print(f"Done: {topic} ({elapsed}s)")
+                      else:
+                          failed.append(topic)
+                          print(f"Failed: {topic}")
+
+              if i + 2 < len(topics):
+                  time.sleep(5)
+
+          if failed:
+              print(f"\nFailed topics: {failed}")
+              exit(1)
 
           print("All pages generated")
           EOF
@@ -138,10 +191,10 @@ jobs:
 
           git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.wiki.git" /tmp/wiki
 
-          cp /tmp/wiki_pages/*.md /tmp/wiki/
+          cp /tmp/wiki_pages/*.md /tmp/wiki/ 2>/dev/null || true
 
           cd /tmp/wiki
           git add .
           git diff --cached --quiet && exit 0
-          git commit -m "wiki: bulk generate 10 pages"
+          git commit -m "wiki: bulk generate pages"
           git push
